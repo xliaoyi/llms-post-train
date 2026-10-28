@@ -24,6 +24,26 @@ prompt and four tools (`bash`, `read_file`, `write_file`, `edit_file`), and was 
 - Max turns: 40 on training tasks, 100 on eval tasks. Opus runs use adaptive thinking with effort `medium`;
   thinking content is not stored.
 
+## Harbor Hub
+
+The same rollouts, plus the student evaluations, are public on [Harbor Hub](https://hub.harborframework.com) as
+one job per model and split. They were converted from our `trajectory.json` files to Harbor job format (ATIF
+trajectories); rewards are the task verifiers as run by our Apptainer runner, which gives the same oracle (62/64)
+and empty-solution (0/64) results as Harbor's own singularity backend on the 64 eval tasks.
+
+| Model | Split | Trials | Passed | Harbor Hub job |
+|---|---|---|---|---|
+| gpt-5.6-luna | train | 1368 | 116 | [link](https://hub.harborframework.com/jobs/1f791ffe-d34a-4f34-8b9d-85672e91c655) |
+| gpt-5.6-luna | eval | 192 | 38 | [link](https://hub.harborframework.com/jobs/73320754-56dc-4db1-9c15-fcbf007c0ec5) |
+| claude-opus-5.5 | train | 355 | 173 | [link](https://hub.harborframework.com/jobs/280a0bbf-8a9c-448b-946a-7756d0d32e7a) |
+| claude-opus-5.5 | eval | 192 | 130 | [link](https://hub.harborframework.com/jobs/6fd67471-a37f-4076-97ee-f73747f12686) |
+| Qwen3.8-35B-A3B-Distill, zero-shot | eval | 192 | 27 | [link](https://hub.harborframework.com/jobs/673854dd-bb4b-4418-bbac-52d77619fa31) |
+| gemma-4-12B-it, zero-shot | eval | 192 | 9 | [link](https://hub.harborframework.com/jobs/37603119-d5c8-4c6d-a596-7a3b218af0cc) |
+| Qwen3.8-35B-A3B-Distill, LoRA SFT | eval | 192 | 5 | [link](https://hub.harborframework.com/jobs/2c1f2932-f62a-4e84-a5d2-25b7cb97c167) |
+
+Luna train = round 1 (attempts 0–7) and round 2 (attempts 8–23 on the 50 tasks round 1 did not solve); pilots are
+not included.
+
 ## Layout
 
 ```
