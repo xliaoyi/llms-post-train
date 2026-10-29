@@ -1,6 +1,8 @@
 # llms-post-train: teacher trajectories for dbt agent distillation
 
-Agent rollouts of two teacher models, **gpt-5.6-luna** and **claude-opus-5-5**, on dbt analytics tasks.
+Agent rollouts of two teacher models, **gpt-5.6-luna** and **claude-opus-5-5**, on dbt analytics tasks, plus
+evaluation rollouts of the open-weight students (zero-shot and after LoRA SFT on the teacher trajectories) and the
+code that produced them (`code/`).
 Training tasks come from Spider2-DBT and ADE-bench; evaluation tasks are the analytics category of data-eng-bench
 (DuckDB backend). Every rollout ran in the task's official container image (via Apptainer) with the same system
 prompt and four tools (`bash`, `read_file`, `write_file`, `edit_file`), and was graded by the task's own tests
@@ -24,6 +26,18 @@ prompt and four tools (`bash`, `read_file`, `write_file`, `edit_file`), and was 
 - Max turns: 40 on training tasks, 100 on eval tasks. Opus runs use adaptive thinking with effort `medium`;
   thinking content is not stored.
 
+### Students (data-eng-bench analytics, eval)
+
+| Model | Attempts per task | Rollouts passed | Tasks solved |
+|---|---|---|---|
+| Qwen3.5-35B-A3B, zero-shot | 4 | 38/256 (14.8%) | 25/64 |
+| Qwen3.8-35B-A3B-Distill, zero-shot | 4 | 32/256 (12.5%) | 19/64 |
+| gemma-4-12B-it, zero-shot | 3 | 9/192 (4.7%) | 5/64 |
+| Qwen3.8-35B-A3B-Distill, LoRA SFT (v4) | 3 | 5/192 (2.6%) | 4/64 |
+| gemma-4-12B-it, LoRA SFT (v4) | 3 | 0/192 (0.0%) | 0/64 |
+
+Students were served with vLLM and ran in the same harness, prompt, tools and 100-turn limit as the teachers.
+
 ## Harbor Hub
 
 The same rollouts, plus the student evaluations, are public on [Harbor Hub](https://hub.harborframework.com) as
@@ -37,12 +51,16 @@ and empty-solution (0/64) results as Harbor's own singularity backend on the 64 
 | gpt-5.6-luna | eval | 192 | 38 | [link](https://hub.harborframework.com/jobs/73320754-56dc-4db1-9c15-fcbf007c0ec5) |
 | claude-opus-5.5 | train | 355 | 173 | [link](https://hub.harborframework.com/jobs/280a0bbf-8a9c-448b-946a-7756d0d32e7a) |
 | claude-opus-5.5 | eval | 192 | 130 | [link](https://hub.harborframework.com/jobs/6fd67471-a37f-4076-97ee-f73747f12686) |
-| Qwen3.8-35B-A3B-Distill, zero-shot | eval | 192 | 27 | [link](https://hub.harborframework.com/jobs/673854dd-bb4b-4418-bbac-52d77619fa31) |
+| Qwen3.5-35B-A3B, zero-shot | eval | 256 | 38 | [link](https://hub.harborframework.com/jobs/28fa0a97-389e-4fc2-9676-6652df770eb8) |
+| Qwen3.8-35B-A3B-Distill, zero-shot | eval | 256 | 32 | [link](https://hub.harborframework.com/jobs/78f73469-ba98-4b13-97da-322875e2bcc5) |
 | gemma-4-12B-it, zero-shot | eval | 192 | 9 | [link](https://hub.harborframework.com/jobs/37603119-d5c8-4c6d-a596-7a3b218af0cc) |
 | Qwen3.8-35B-A3B-Distill, LoRA SFT | eval | 192 | 5 | [link](https://hub.harborframework.com/jobs/2c1f2932-f62a-4e84-a5d2-25b7cb97c167) |
+| gemma-4-12B-it, LoRA SFT | eval | 192 | 0 | [link](https://hub.harborframework.com/jobs/c1b095a1-4d51-42fd-a131-57ad921de9c2) |
 
 Luna train = round 1 (attempts 0–7) and round 2 (attempts 8–23 on the 50 tasks round 1 did not solve); pilots are
-not included.
+not included. An earlier 3-attempt Qwen3.8 zero-shot job
+([673854dd](https://hub.harborframework.com/jobs/673854dd-bb4b-4418-bbac-52d77619fa31), 27/192) is superseded by the
+4-attempt one above.
 
 ## Layout
 
@@ -56,8 +74,19 @@ trajectories/
   opus-5.5/
     train/                          71 tasks x 5 attempts   (355)
     eval/                           64 tasks x 3 attempts   (192)
+  qwen3.5-35b-a3b-zeroshot/eval/            64 x 4  (256)
+  qwen3.8-35b-a3b-distill-zeroshot/eval/    64 x 4  (256)
+  gemma-4-12b-it-zeroshot/eval/             64 x 3  (192)
+  qwen3.8-35b-a3b-distill-lora-sft/eval/    64 x 3  (192)
+  gemma-4-12b-it-lora-sft/eval/             64 x 3  (192)
 each: <source>/<task>/<attempt>/trajectory.json      (source: spider2 | ade | deb)
 sft/<version>.jsonl                 SFT datasets (see below)
+code/
+  harness/      Apptainer task runner (env.py), 4-tool agent (agent.py), oracle check, DAgger rollouts
+  sft/          SFT data prep, chunked loss, full / LoRA trainer, SLURM script
+  scripts/      vLLM serving, Harbor parity check, conversion to Harbor jobs
+  data/         task selection and task lists;  images/defs/  Apptainer image definitions
+  patches/      Harbor singularity --fakeroot patch
 ```
 
 ## trajectory.json
