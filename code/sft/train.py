@@ -38,7 +38,7 @@ def merged_state_dict(model, scale):
         if k.endswith(".base_layer.weight"):
             p = k[:-len(".base_layer.weight")]
             delta = sd[p + ".lora_B.default.weight"].float() @ sd[p + ".lora_A.default.weight"].float()
-            v = (v.float() + scale * delta).to(v.dtype)
+            v = (v.float() + scale * delta).to(v.dtype).cpu()
             k = p + ".weight"
         out[k.replace(".base_layer.", ".")] = v
     return out
@@ -46,6 +46,7 @@ def merged_state_dict(model, scale):
 
 def save(model, tok, base, out, lora_scale=None):
     out.mkdir(parents=True, exist_ok=True)
+    torch.cuda.empty_cache()
     if lora_scale is not None:
         model = model.get_base_model()
         state = merged_state_dict(model, lora_scale)
@@ -53,13 +54,15 @@ def save(model, tok, base, out, lora_scale=None):
         state = model.state_dict()
     # weights are trained in fp32 (full) or bf16 (LoRA) but served in bf16, like the base model
     model.config.dtype = torch.bfloat16
-    model.save_pretrained(out, state_dict={k: v.to(torch.bfloat16) for k, v in state.items()})
+    # on CPU: save_pretrained re-splits fused expert weights, which needs memory the training GPU lacks
+    model.save_pretrained(out, state_dict={k: v.to("cpu", torch.bfloat16) for k, v in state.items()})
     tok.save_pretrained(out)
     # keep generation/chat/processor settings of the base model
     for f in ["generation_config.json", "chat_template.jinja", "processor_config.json", "preprocessor_config.json",
               "video_preprocessor_config.json"]:
         if (Path(base) / f).exists():
             shutil.copy2(Path(base) / f, out / f)
+    (out / "READY").touch()  # for sft/eval_loop.py
 
 
 def main():
@@ -76,6 +79,9 @@ def main():
     ap.add_argument("--lora-r", type=int, default=0, help="LoRA rank; 0 = full fine-tune")
     ap.add_argument("--lora-alpha", type=int, help="default 2 * rank")
     ap.add_argument("--max-len", type=int, default=0, help="skip examples longer than this (memory)")
+    ap.add_argument("--save-every", type=int, default=0, help="also save a checkpoint every N optimizer steps")
+    ap.add_argument("--wait-eval", action="store_true",
+                    help="after saving step N, wait until the previous step checkpoint has eval.json or is deleted")
     args = ap.parse_args()
     random.seed(args.seed)
     torch.manual_seed(args.seed)
@@ -123,7 +129,7 @@ def main():
     print(f"{len(data)} examples, {total_steps} optimizer steps", flush=True)
 
     log = open(out / "train_log.jsonl", "a")
-    step, t0, acc_loss, acc_n = 0, time.time(), 0.0, 0
+    step, t0, acc_loss, acc_n, oom, prev_ckpt = 0, time.time(), 0.0, 0, False, None
     for epoch in range(args.epochs):
         order = list(range(len(data)))
         random.shuffle(order)
@@ -131,12 +137,21 @@ def main():
             ex = data[idx]
             ids = torch.tensor([ex["input_ids"]], device="cuda")
             labels = torch.tensor([ex["labels"]], device="cuda")
-            with torch.autocast("cuda", dtype=torch.bfloat16):
-                loss = sft_loss(lm, ids, labels)
-            (loss / args.grad_accum).backward()
-            acc_loss += loss.item()
+            try:
+                with torch.autocast("cuda", dtype=torch.bfloat16):
+                    loss = sft_loss(lm, ids, labels)
+                (loss / args.grad_accum).backward()
+                acc_loss += loss.item()
+            except torch.OutOfMemoryError:  # partial grads are now in this group: drop the whole step
+                loss, oom = None, True
+                torch.cuda.empty_cache()
             acc_n += 1
             if acc_n == args.grad_accum or i == len(order) - 1:
+                if oom:
+                    print(f"OOM in step {step + 1}, skipped", flush=True)
+                    opt.zero_grad(set_to_none=True)
+                    acc_loss, acc_n, oom = 0.0, 0, False
+                    continue
                 gnorm = torch.nn.utils.clip_grad_norm_(params, 1.0).item()
                 opt.step()
                 sched.step()
@@ -148,6 +163,12 @@ def main():
                 log.flush()
                 print(rec, flush=True)
                 acc_loss, acc_n = 0.0, 0
+                if args.save_every and step % args.save_every == 0:
+                    ckpt = out / f"step{step}"
+                    save(model, tok, args.model, ckpt, lora_scale)
+                    while args.wait_eval and prev_ckpt and prev_ckpt.exists() and not (prev_ckpt / "eval.json").exists():
+                        time.sleep(30)
+                    prev_ckpt = ckpt
                 if step >= total_steps:
                     break
         save(model, tok, args.model, out / f"epoch{epoch + 1}", lora_scale)

@@ -43,6 +43,7 @@ JOBS = {  # <model>/<split> -> (model, [(run dir, max attempts or None, attempt 
     "claude-opus-5.5/eval": (OPUS, [("eval/opus-5-5-t100", EVAL, 0)]),
     "qwen3.8-35b-a3b-zeroshot/eval": (("empero-ai/Qwen3.8-35B-A3B-Distill", None), [("eval/zs-qwen38-35b-t100", 4, 0)]),
     "qwen3.5-35b-a3b-zeroshot/eval": (("Qwen/Qwen3.5-35B-A3B", None), [("eval/zs-qwen35-35b-t100", 4, 0)]),
+    "qwen3.5-35b-a3b-zeroshot/train": (("Qwen/Qwen3.5-35B-A3B", None), [("qwen35-train", None, 0)]),  # self-distillation data
     "gemma-4-12b-it-zeroshot/eval": (("google/gemma-4-12B-it", None), [("eval/zs-gemma4-12b-it-t100", EVAL, 0)]),
     "qwen3.8-35b-a3b-lora-sft/eval": (("qwen3.8-35b-a3b-lora-sft-v4", None), [("eval/sft-v4-qwen35b-t100", EVAL, 0)]),
     "gemma-4-12b-it-lora-sft/eval": (("gemma-4-12b-it-lora-sft-v4", None), [("eval/sft-v4-gemma12b-t100", EVAL, 0)]),

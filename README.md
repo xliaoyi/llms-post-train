@@ -51,6 +51,7 @@ and empty-solution (0/64) results as Harbor's own singularity backend on the 64 
 | gpt-5.6-luna | eval | 192 | 38 | [link](https://hub.harborframework.com/jobs/73320754-56dc-4db1-9c15-fcbf007c0ec5) |
 | claude-opus-5.5 | train | 355 | 173 | [link](https://hub.harborframework.com/jobs/280a0bbf-8a9c-448b-946a-7756d0d32e7a) |
 | claude-opus-5.5 | eval | 192 | 130 | [link](https://hub.harborframework.com/jobs/6fd67471-a37f-4076-97ee-f73747f12686) |
+| Qwen3.5-35B-A3B, zero-shot | train | 4720 | 1012 | [link](https://hub.harborframework.com/jobs/21501549-eb99-4d61-b330-a917c2fa3178) |
 | Qwen3.5-35B-A3B, zero-shot | eval | 256 | 38 | [link](https://hub.harborframework.com/jobs/28fa0a97-389e-4fc2-9676-6652df770eb8) |
 | Qwen3.8-35B-A3B-Distill, zero-shot | eval | 256 | 32 | [link](https://hub.harborframework.com/jobs/78f73469-ba98-4b13-97da-322875e2bcc5) |
 | gemma-4-12B-it, zero-shot | eval | 192 | 9 | [link](https://hub.harborframework.com/jobs/37603119-d5c8-4c6d-a596-7a3b218af0cc) |
@@ -74,6 +75,7 @@ trajectories/
   opus-5.5/
     train/                          71 tasks x 5 attempts   (355)
     eval/                           64 tasks x 3 attempts   (192)
+  qwen3.5-35b-a3b-zeroshot/train/           71 x 65, + 3 more on the 35 solved tasks  (4720)
   qwen3.5-35b-a3b-zeroshot/eval/            64 x 4  (256)
   qwen3.8-35b-a3b-distill-zeroshot/eval/    64 x 4  (256)
   gemma-4-12b-it-zeroshot/eval/             64 x 3  (192)
@@ -113,5 +115,7 @@ Qwen3.5 chat template**: `{"source": "<trajectory path>", "input_ids": [...], "l
 everywhere except teacher assistant turns. To train a different student (e.g. Gemma), rebuild from `trajectories/`
 with that model's template. `luna-v1` (Luna round 1), `luna-v2` (+ round 2), `v3` (Luna + Opus coverage + DAgger
 rollouts, where a Qwen3.5-2B student acted first and Opus took over; the DAgger rollouts are not included here).
+`v5-qwen35-self.jsonl.gz` (gzipped) is self-distillation data: the 1012 passing Qwen3.5-35B-A3B train rollouts, 962 of
+them within 65,536 tokens; training uses the 788 within 49,152 tokens (34 tasks).
 
 Note: one Twilio account SID in Spider2's `twilio001` sample data is replaced with `AC_REDACTED_SID`.
