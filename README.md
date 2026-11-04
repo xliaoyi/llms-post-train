@@ -105,8 +105,8 @@ Environment fixes (`code/harbor-cmp`, used by the rerun):
   reasons are kept apart, not deleted; `records.py` writes per-trial termination (completed, turn limit, timeout,
   API error, crash) and metrics on both rewards. Qwen Code's stream idle timeout is disabled.
 
-Trajectories: Hugging Face [`xliaoyi/dbt-agent-sft`](https://huggingface.co/datasets/xliaoyi/dbt-agent-sft), subsets
-`qwen3.6-35b-a3b_{qwen-think,qwen-nothink,alt-think,alt-nothink}_v1` (540 rows each, `metadata.split`).
+Trajectories: the Hugging Face subsets `qwen3.6-35b-a3b_*_v1` were removed from
+[`xliaoyi/dbt-agent-sft`](https://huggingface.co/datasets/xliaoyi/dbt-agent-sft) on 2026-11-04 (still in its git history).
 Full Harbor jobs (logs, verifier output; altimate-code trajectories converted to ATIF) on Harbor Hub:
 
 | Config | Train (420 trials) | Test (120 trials) |
@@ -144,9 +144,9 @@ Termination (536 trials per config): Qwen Code thinking on 494 completed / 42 tu
 altimate-code thinking on 402 completed / 117 turn limit / 10 context overflow / 7 timeout; off 363 / 163 / 3 / 7.
 No model API errors. Per-config numbers: `code/harbor-cmp/results_v2.json` (v1: `results_v1.json`).
 
-Trajectories: Hugging Face [`xliaoyi/dbt-agent-sft`](https://huggingface.co/datasets/xliaoyi/dbt-agent-sft), subsets
-`qwen3.6-35b-a3b_{qwen-think,qwen-nothink,alt-think,alt-nothink}_v2` (536 rows each; `metadata.reward`,
-`metadata.strict`, `metadata.stop`). Harbor Hub jobs (shared with `inf385t-llms-post-train`):
+Trajectories: the Hugging Face subsets `qwen3.6-35b-a3b_*_v2` were removed from
+[`xliaoyi/dbt-agent-sft`](https://huggingface.co/datasets/xliaoyi/dbt-agent-sft) on 2026-11-04 (still in its git history).
+Harbor Hub jobs (shared with `inf385t-llms-post-train`):
 
 | Config | Train (420 trials) | Test (116 trials) |
 |---|---|---|
